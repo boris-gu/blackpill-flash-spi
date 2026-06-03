@@ -1,3 +1,7 @@
+build
+mx.scratch
+!.settings
+
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
