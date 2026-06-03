@@ -27,10 +27,12 @@ struct lfs_config littlefs_config = {
     .read_size = 256,
     .prog_size = 256,
     .block_size = 4096,
-    .block_count = 256,
+    .block_count = 2048,
+    // Must be a multiple of the read and program sizes, and a factor of the block size
     .cache_size = 256,
     .lookahead_size = 8,
-    .block_cycles = 100,
+    // block_cycles определяет количество циклов до перемещения блока метаданных. Чем чаще перемещается блок метаданных, тем равномернее распределяется износ
+    .block_cycles = 50,
 };
 
 lfs_t littlefs;
