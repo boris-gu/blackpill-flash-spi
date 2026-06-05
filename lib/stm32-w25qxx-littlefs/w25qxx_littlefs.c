@@ -51,10 +51,13 @@ int w25qxx_littlefs_init(W25QXX_HandleTypeDef *w25qxx_init) {
     // this should only happen on the first boot
     if (err) {
         lfs_format(&littlefs, &littlefs_config);
-        lfs_mount(&littlefs, &littlefs_config);
+        err = lfs_mount(&littlefs, &littlefs_config);
+        if (err) {
+            return 0;
+        }
+        return 2;
     }
-
-    return 0;
+    return 1;
 
 }
 

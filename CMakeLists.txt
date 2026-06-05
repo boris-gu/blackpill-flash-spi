@@ -48,6 +48,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${LITTLEFS_SRC}
     lib/stm32-w25qxx/src/w25qxx.c
+    lib/stm32-w25qxx-littlefs/w25qxx_littlefs.c
 )
 
 # Add include paths
@@ -55,6 +56,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     lib/stm32-w25qxx/src
     lib/littlefs-2.11.3
+    lib/stm32-w25qxx-littlefs
 )
 
 # Add project symbols (macros)
