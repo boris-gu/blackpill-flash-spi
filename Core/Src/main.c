@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "w25qxx.h"
 #include "lfs.h"
 #include "w25qxx_littlefs.h"
@@ -323,16 +324,14 @@ void start_flash_task(void *argument)
   static const size_t UART_BUFF_LEN = 50;
   size_t uart_str_len = 0;
   char uart_buff[UART_BUFF_LEN];
-  uint16_t test = 0;
 
   // W25Qxx
   W25QXX_HandleTypeDef w25qxx;
-  uint8_t buf[256];
 
   // LOOP
   static const TickType_t loop_period = pdMS_TO_TICKS(1000);
   TickType_t loop_last_time = xTaskGetTickCount();
-  for (int8_t i = 10; i > 0; i--) {
+  for (int8_t i = 3; i > 0; i--) {
     uart_str_len = sprintf(uart_buff, "count: %u\n", i);
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
     vTaskDelayUntil(&loop_last_time, loop_period);
@@ -345,25 +344,54 @@ void start_flash_task(void *argument)
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
     uart_str_len = sprintf(uart_buff, "Device = 0x%4x\n", w25qxx.device_id);
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
-    uart_str_len = sprintf(uart_buff, "Block size = 0x%04x (%lu)\n", w25qxx.block_size, w25qxx.block_size);
+    uart_str_len = sprintf(uart_buff, "Block size = 0x%04lx (%lu)\n", w25qxx.block_size, w25qxx.block_size);
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
-    uart_str_len = sprintf(uart_buff, "Block count = 0x%04x (%lu)\n", w25qxx.block_count, w25qxx.block_count);
+    uart_str_len = sprintf(uart_buff, "Block count = 0x%04lx (%lu)\n", w25qxx.block_count, w25qxx.block_count);
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
-    uart_str_len = sprintf(uart_buff, "Sector size = 0x%04x (%lu)\n", w25qxx.sector_size, w25qxx.sector_size);
+    uart_str_len = sprintf(uart_buff, "Sector size = 0x%04lx (%lu)\n", w25qxx.sector_size, w25qxx.sector_size);
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
-    uart_str_len = sprintf(uart_buff, "Sector in block = 0x%04x (%lu)\n", w25qxx.sectors_in_block, w25qxx.sectors_in_block);
+    uart_str_len = sprintf(uart_buff, "Sector in block = 0x%04lx (%lu)\n", w25qxx.sectors_in_block, w25qxx.sectors_in_block);
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
-    uart_str_len = sprintf(uart_buff, "Total size (in kB) = 0x%04x (%lu)\n",
+    uart_str_len = sprintf(uart_buff, "Total size (in kB) = 0x%04lx (%lu)\n",
                            (w25qxx.block_count * w25qxx.block_size) / 1024,
                            (w25qxx.block_count * w25qxx.block_size) / 1024);
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
     // LittleFS INIT
     uint8_t lfs_is_init = w25qxx_littlefs_init(&w25qxx);
-    uart_str_len = sprintf(uart_buff, "INIT LittleFS: %d\n", lfs_is_init);
+    uart_str_len = sprintf(uart_buff, "\nINIT LittleFS: %d\n", lfs_is_init);
     HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
     if (lfs_is_init) {
       extern lfs_t littlefs;
-      
+      lfs_file_t file;
+
+      int err_file = lfs_file_open(&littlefs, &file, "test.txt", LFS_O_RDWR | LFS_O_CREAT);
+      uart_str_len = sprintf(uart_buff, "OPEN FILE: %d\n", err_file);
+      HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
+      if (err_file >= 0) {
+        // Запись в конец
+        lfs_file_seek(&littlefs, &file, 0, LFS_SEEK_END);
+        srand(xTaskGetTickCount());
+        uart_str_len = sprintf(uart_buff, "%d\n", rand());
+        lfs_file_write(&littlefs, &file, uart_buff, uart_str_len);
+        // Чтение всего файла
+        lfs_file_seek(&littlefs, &file, 0, LFS_SEEK_SET);
+        for (;;) {
+          uart_str_len =
+              lfs_file_read(&littlefs, &file, uart_buff, UART_BUFF_LEN - 1);
+          if (uart_str_len > 0) {
+            uart_buff[uart_str_len] = '\0';
+            HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
+          } else {
+            break;
+          }
+        }
+        lfs_file_close(&littlefs, &file);
+        uart_str_len = sprintf(uart_buff, "CLOSE FILE\n");
+        HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
+      }
+      uart_str_len = sprintf(uart_buff, "UNMOUNT LittleFS\n\n");
+      HAL_UART_Transmit(&huart1, (uint8_t *)uart_buff, uart_str_len, 500);
+      lfs_unmount(&littlefs);
     }
   }
 
